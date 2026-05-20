@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Case, PhClassification, PhReading } from '../cases/types';
 
 interface PhProbeLabProps {
@@ -9,6 +9,7 @@ interface PhProbeLabProps {
 }
 
 const CONTROL_KEY = 'control-distilled-water';
+const TEST_DURATION_MS = 1300;
 
 const CONTROL_READING: PhReading = {
   ph: 7.0,
@@ -43,14 +44,24 @@ export function PhProbeLab({
     [CONTROL_KEY]: CONTROL_READING,
     ...initialReadings,
   });
+  const [testing, setTesting] = useState<Set<string>>(new Set());
 
   const allTested = testable.every((e) => readings[e.id]);
 
   function test(id: string) {
-    if (readings[id]) return;
+    if (readings[id] || testing.has(id)) return;
     const reading = activeCase.phReadings[id];
     if (!reading) return;
-    setReadings((r) => ({ ...r, [id]: reading }));
+
+    setTesting((s) => new Set(s).add(id));
+    window.setTimeout(() => {
+      setReadings((r) => ({ ...r, [id]: reading }));
+      setTesting((s) => {
+        const next = new Set(s);
+        next.delete(id);
+        return next;
+      });
+    }, TEST_DURATION_MS);
   }
 
   function finish() {
@@ -77,6 +88,7 @@ export function PhProbeLab({
           name="Distilled water (control)"
           description="Provided by the lab. Reference for a neutral reading."
           reading={readings[CONTROL_KEY]}
+          testing={false}
           onTest={() => {}}
           locked
         />
@@ -91,6 +103,7 @@ export function PhProbeLab({
             name={e.name}
             description={e.description}
             reading={readings[e.id]}
+            testing={testing.has(e.id)}
             onTest={() => test(e.id)}
           />
         ))}
@@ -112,45 +125,118 @@ function SampleRow({
   name,
   description,
   reading,
+  testing,
   onTest,
   locked,
 }: {
   name: string;
   description: string;
   reading?: PhReading;
+  testing: boolean;
   onTest: () => void;
   locked?: boolean;
 }) {
   return (
-    <li className="rounded-md border border-detective-slate bg-detective-ink/40 p-3">
+    <li className="relative overflow-hidden rounded-md border border-detective-slate bg-detective-ink/40 p-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate font-semibold text-detective-paper">{name}</p>
           <p className="text-xs text-detective-paper/60">{description}</p>
         </div>
-        {!reading && !locked && (
+        {!reading && !locked && !testing && (
           <button className="btn-primary text-xs" onClick={onTest}>
             Test
           </button>
         )}
+        {testing && (
+          <span className="readout flex items-center gap-1 text-xs">
+            <Spinner />
+            Analyzing…
+          </span>
+        )}
       </div>
-      {reading && (
-        <div className="mt-3 flex items-center gap-3">
+
+      {testing && <BubbleField />}
+
+      {reading && !testing && (
+        <div className="mt-3 flex items-center gap-3 animate-reveal-pop">
           <div
-            className="h-10 w-14 rounded border border-detective-paper/40"
+            className="h-10 w-14 rounded border border-detective-paper/40 shadow-inner"
             style={{ backgroundColor: reading.hexColor }}
             aria-label={`indicator color ${reading.hexColor}`}
           />
           <div className="text-sm">
-            <p className="readout">pH ≈ {reading.ph.toFixed(1)}</p>
+            <p className="readout">
+              pH ≈ <PhCounter target={reading.ph} />
+            </p>
             <p className="text-detective-paper/70">
               {CLASSIFICATION_LABEL[reading.classification]}
             </p>
           </div>
         </div>
       )}
-      {reading && <p className="mt-2 text-xs text-detective-paper/60">{reading.notes}</p>}
+      {reading && !testing && (
+        <p className="mt-2 text-xs text-detective-paper/60 animate-slide-in-up">
+          {reading.notes}
+        </p>
+      )}
     </li>
+  );
+}
+
+function PhCounter({ target }: { target: number }) {
+  const [value, setValue] = useState(0);
+  const raf = useRef<number | undefined>(undefined);
+
+  useEffect(() => {
+    const start = performance.now();
+    const duration = 650;
+    const from = 0;
+
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setValue(from + (target - from) * eased);
+      if (t < 1) raf.current = requestAnimationFrame(step);
+    };
+    raf.current = requestAnimationFrame(step);
+    return () => {
+      if (raf.current) cancelAnimationFrame(raf.current);
+    };
+  }, [target]);
+
+  return <span>{value.toFixed(1)}</span>;
+}
+
+function Spinner() {
+  return (
+    <span
+      className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-detective-amber border-t-transparent"
+      aria-hidden
+    />
+  );
+}
+
+function BubbleField() {
+  const bubbles = Array.from({ length: 7 }, (_, i) => i);
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0">
+      {bubbles.map((i) => {
+        const left = 8 + ((i * 13) % 86);
+        const delay = (i * 0.13) % 1.2;
+        const drift = ((i % 3) - 1) * 6;
+        const size = 6 + (i % 3) * 2;
+        const style: React.CSSProperties = {
+          left: `${left}%`,
+          width: `${size}px`,
+          height: `${size}px`,
+          animationDelay: `${delay}s`,
+          ['--bx' as never]: '0px',
+          ['--bdrift' as never]: `${drift}px`,
+        };
+        return <span key={i} className="bubble" style={style} />;
+      })}
+    </div>
   );
 }
 

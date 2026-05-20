@@ -10,6 +10,7 @@ import { VerdictPanel } from './ui/VerdictPanel';
 import { ReflectionDialog } from './ui/ReflectionDialog';
 import { ScoreCard } from './ui/ScoreCard';
 import { PhaseStepper } from './ui/PhaseStepper';
+import { Confetti } from './ui/Confetti';
 import { caseOne } from './cases/case-01-poisoned-principal';
 import { useGameStore } from './store/gameStore';
 import { buildProgress, scoreCase } from './lib/ibCriteria';
@@ -316,12 +317,17 @@ function CompletePhase() {
 
   return (
     <div className="grid gap-4 md:grid-cols-3">
+      {verdictCorrect && <Confetti />}
       <div className="space-y-4 md:col-span-2">
         <section
-          className={`panel ${verdictCorrect ? 'border-detective-amber/60' : 'border-detective-clue/60'}`}
+          className={`panel ${
+            verdictCorrect
+              ? 'border-detective-amber/60 animate-reveal-pop'
+              : 'border-detective-clue/60 animate-shake animate-flash-red'
+          }`}
         >
           <h2 className="text-2xl font-bold text-detective-paper">
-            {verdictCorrect ? 'Case solved!' : 'Case closed — verdict was wrong.'}
+            {verdictCorrect ? '🎉  Case solved!' : '✗  Case closed — verdict was wrong.'}
           </h2>
           <p className="mt-2 text-sm text-detective-paper/80">
             You named <span className="font-semibold">{suspect?.name ?? '—'}</span> as the cause.
@@ -331,7 +337,9 @@ function CompletePhase() {
           </p>
         </section>
 
-        <ScoreCard scores={progress.scores} />
+        <div className="animate-slide-in-up">
+          <ScoreCard scores={progress.scores} />
+        </div>
       </div>
       <div className="space-y-4">
         <JournalSidebar />
