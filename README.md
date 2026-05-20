@@ -1,73 +1,95 @@
-# React + TypeScript + Vite
+# CSI: Science Lab
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+An educational browser-based game for Grade 9 IB MYP students. Players act as junior forensic scientists and solve mystery cases using the scientific method. Cases are aligned with MYP Year 4 Chemistry, Biology, and Physics topics and the IB MYP Sciences Assessment Criteria A–D.
 
-Currently, two official plugins are available:
+> **MVP target:** Case 1 — *The Poisoned Principal* (Chemistry: pH, acids/bases, neutralization).
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Tech stack
 
-## React Compiler
+- **Vite** + **React 19** + **TypeScript** — UI layer and dev tooling
+- **Phaser 4** — game engine for crime-scene exploration and lab mini-games
+- **Tailwind CSS v3** — styling
+- **Zustand** — shared state between React and Phaser
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+React renders the UI overlay (Hypothesis Board, Journal, panels) while Phaser owns the gameplay canvas. They communicate through an `EventBus` singleton so neither layer reaches into the other directly.
 
-## Expanding the ESLint configuration
+## Project layout
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```
+src/
+├── App.tsx                     # main menu + case shell
+├── main.tsx                    # React entry, loads Tailwind globals
+├── game/                       # Phaser layer
+│   ├── PhaserGame.tsx          # React wrapper that mounts/destroys Phaser
+│   ├── config.ts               # Phaser.Game config
+│   ├── EventBus.ts             # Phaser ↔ React event bridge
+│   ├── useEventBus.ts          # React hook for EventBus subscriptions
+│   └── scenes/
+│       └── BootScene.ts        # placeholder boot scene
+├── ui/                         # React components
+│   ├── HypothesisBoard.tsx     # "If… then… because…" form + variable tagging
+│   ├── ScientistJournal.tsx
+│   ├── EvidenceTray.tsx
+│   ├── VerdictPanel.tsx
+│   ├── ReflectionDialog.tsx
+│   └── ScoreCard.tsx           # IB MYP criterion scores A–D
+├── cases/                      # data-driven case definitions
+│   ├── types.ts
+│   └── case-01-poisoned-principal.ts
+├── lib/
+│   ├── ibCriteria.ts           # scoring logic per IB criterion
+│   └── progress.ts             # localStorage save/load
+├── store/
+│   └── gameStore.ts            # Zustand store
+└── styles/
+    └── globals.css             # Tailwind directives + utility classes
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Getting started
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev      # http://localhost:5173
+npm run build    # type-check + production bundle
+npm run lint     # ESLint
+npm run preview  # serve the production build locally
 ```
+
+## Adding a new case
+
+Cases are plain TypeScript data — no engine changes needed for a typical case.
+
+1. Create `src/cases/case-NN-<slug>.ts`, exporting a `Case` object that matches the interface in `src/cases/types.ts`.
+2. Register it where cases are listed (currently `App.tsx` hardcodes Case 1 for the MVP; a registry is on the roadmap).
+3. Ensure each `ReflectionQuestion` is tagged with the IB criterion (`A`–`D`) it targets so the scorecard is meaningful.
+
+## IB MYP criterion mapping
+
+| Criterion | Where it's earned |
+|-----------|-------------------|
+| **A — Knowing & Understanding** | Lab tool usage (terminology, correct procedure) |
+| **B — Inquiring & Designing** | Hypothesis Board (variables, ≥2 hypotheses) |
+| **C — Processing & Evaluating** | Evidence collection + data analysis |
+| **D — Reflecting on Impacts** | Reflection answers + correct verdict |
+
+Scoring logic lives in `src/lib/ibCriteria.ts` and is centralized — engine code never computes scores directly.
+
+## MVP scope
+
+See the full project brief for the full vision. The current scaffold delivers items 1–8 of the brief's "Next Steps" section. Remaining MVP work tracked separately:
+
+- [x] Vite + React + TS + Phaser + Tailwind set up
+- [x] Main menu (start Case 1)
+- [x] Case 1 data file with suspects, evidence, hypotheses, reflection
+- [x] Hypothesis Board functional
+- [ ] Crime scene Phaser scene with evidence pickups
+- [ ] pH probe lab mini-game
+- [ ] Mixing reaction visualization
+- [ ] Data analysis screen
+- [ ] Verdict + reflection flow wired end-to-end
+- [ ] Scorecard rendered on case completion
+- [ ] Progress saved to localStorage
+
+## Claude Code on the web
+
+A `SessionStart` hook in `.claude/hooks/session-start.sh` runs `npm install` automatically when a remote session boots so `npm run dev` / `npm run build` / `npm run lint` are ready immediately.

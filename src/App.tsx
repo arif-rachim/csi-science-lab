@@ -1,122 +1,82 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useState } from 'react';
+import { PhaserGame } from './game/PhaserGame';
+import { HypothesisBoard } from './ui/HypothesisBoard';
+import { EvidenceTray } from './ui/EvidenceTray';
+import { ScientistJournal } from './ui/ScientistJournal';
+import { caseOne } from './cases/case-01-poisoned-principal';
+
+type Screen = 'menu' | 'case';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [screen, setScreen] = useState<Screen>('menu');
+  const [submittedHypotheses, setSubmittedHypotheses] = useState<string[]>([]);
+
+  if (screen === 'menu') {
+    return <MainMenu onStart={() => setScreen('case')} />;
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
+    <main className="mx-auto max-w-6xl space-y-6 p-4 md:p-8">
+      <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
+          <p className="text-xs uppercase tracking-widest text-detective-amber">Case 01</p>
+          <h1 className="text-2xl font-bold text-detective-paper">{caseOne.title}</h1>
         </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
+        <button className="btn-ghost" onClick={() => setScreen('menu')}>
+          ← Main menu
         </button>
-      </section>
+      </header>
 
-      <div className="ticks"></div>
+      <p className="rounded-md border border-detective-slate bg-detective-navy/60 p-4 text-sm text-detective-paper/90">
+        {caseOne.story}
+      </p>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+      <div className="grid gap-4 md:grid-cols-2">
+        <PhaserGame />
+        <ScientistJournal activeCase={caseOne} observations={[]} />
+      </div>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      <EvidenceTray evidence={caseOne.evidence} collectedIds={[]} />
+
+      <HypothesisBoard
+        activeCase={caseOne}
+        initialSelected={submittedHypotheses}
+        onSubmit={setSubmittedHypotheses}
+      />
+
+      {submittedHypotheses.length > 0 && (
+        <p className="readout">
+          {submittedHypotheses.length} hypothesis(es) submitted — lab phase coming next.
+        </p>
+      )}
+    </main>
+  );
 }
 
-export default App
+function MainMenu({ onStart }: { onStart: () => void }) {
+  return (
+    <main className="flex min-h-full flex-col items-center justify-center p-6 text-center">
+      <p className="mb-2 text-xs uppercase tracking-[0.3em] text-detective-amber">
+        IB MYP Year 4 · Sciences
+      </p>
+      <h1 className="mb-3 text-5xl font-extrabold text-detective-paper">CSI: Science Lab</h1>
+      <p className="mb-8 max-w-xl text-detective-paper/80">
+        Solve school mysteries using the scientific method. Form hypotheses, run lab tests,
+        analyze data, and reach a verdict you can defend.
+      </p>
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <button className="btn-primary text-lg" onClick={onStart}>
+          Start Case 1 — The Poisoned Principal
+        </button>
+        <button className="btn-ghost" disabled>
+          About (coming soon)
+        </button>
+        <button className="btn-ghost" disabled>
+          Settings (coming soon)
+        </button>
+      </div>
+    </main>
+  );
+}
+
+export default App;
