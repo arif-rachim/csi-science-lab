@@ -47,6 +47,20 @@ export interface HypothesisTemplate {
   correct: boolean;
 }
 
+export type PhClassification =
+  | 'strong-acid'
+  | 'weak-acid'
+  | 'neutral'
+  | 'weak-base'
+  | 'strong-base';
+
+export interface PhReading {
+  ph: number;
+  hexColor: string;
+  classification: PhClassification;
+  notes: string;
+}
+
 export interface Case {
   id: string;
   title: string;
@@ -57,6 +71,7 @@ export interface Case {
   evidence: Evidence[];
   labTools: LabTool[];
   hypothesisTemplates: HypothesisTemplate[];
+  phReadings: Record<string, PhReading>;
   correctVerdict: string;
   reflectionQuestions: ReflectionQuestion[];
   estimatedMinutes: number;

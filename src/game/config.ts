@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { BootScene } from './scenes/BootScene';
+import { CrimeSceneScene } from './scenes/CrimeSceneScene';
 
 export const GAME_WIDTH = 800;
 export const GAME_HEIGHT = 480;
@@ -9,10 +10,10 @@ export const phaserConfig: Phaser.Types.Core.GameConfig = {
   width: GAME_WIDTH,
   height: GAME_HEIGHT,
   backgroundColor: '#0a1226',
-  pixelArt: true,
+  pixelArt: false,
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
-  scene: [BootScene],
+  scene: [BootScene, CrimeSceneScene],
 };

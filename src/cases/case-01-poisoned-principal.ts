@@ -124,6 +124,43 @@ export const caseOne: Case = {
       correct: false,
     },
   ],
+  phReadings: {
+    'evidence-bottle-a': {
+      ph: 2.8,
+      hexColor: '#e85a3a',
+      classification: 'weak-acid',
+      notes:
+        'Vinegar (acetic acid). Mildly acidic. Sharp taste and smell, but household concentration is not corrosive.',
+    },
+    'evidence-bottle-b': {
+      ph: 9.2,
+      hexColor: '#4a90c8',
+      classification: 'weak-base',
+      notes:
+        'Baking soda solution (sodium bicarbonate). Mildly basic. Used safely in cooking and as a mild cleaner.',
+    },
+    'evidence-bottle-c': {
+      ph: 2.4,
+      hexColor: '#f08040',
+      classification: 'weak-acid',
+      notes:
+        'Lemon juice (citric acid). Acidic but edible. Citric acid does not cause chemical burns at this concentration.',
+    },
+    'evidence-bottle-d': {
+      ph: 1.0,
+      hexColor: '#c41e1e',
+      classification: 'strong-acid',
+      notes:
+        'STRONG ACID. pH ≤ 1 is corrosive — capable of causing burns, internal injury, and matches the symptoms.',
+    },
+    'evidence-coffee-mug': {
+      ph: 1.5,
+      hexColor: '#d12e2e',
+      classification: 'strong-acid',
+      notes:
+        'Residue in the mug is strongly acidic — matches the pH range of Bottle D. The acid was added to the coffee.',
+    },
+  },
   correctVerdict: 'liquid-unknown-x',
   reflectionQuestions: [
     {

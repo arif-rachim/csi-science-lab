@@ -76,19 +76,38 @@ Scoring logic lives in `src/lib/ibCriteria.ts` and is centralized — engine cod
 
 ## MVP scope
 
-See the full project brief for the full vision. The current scaffold delivers items 1–8 of the brief's "Next Steps" section. Remaining MVP work tracked separately:
+Case 1 is playable end-to-end. Cases 2–4 from the brief are not yet built.
 
 - [x] Vite + React + TS + Phaser + Tailwind set up
 - [x] Main menu (start Case 1)
 - [x] Case 1 data file with suspects, evidence, hypotheses, reflection
-- [x] Hypothesis Board functional
-- [ ] Crime scene Phaser scene with evidence pickups
-- [ ] pH probe lab mini-game
-- [ ] Mixing reaction visualization
-- [ ] Data analysis screen
-- [ ] Verdict + reflection flow wired end-to-end
-- [ ] Scorecard rendered on case completion
-- [ ] Progress saved to localStorage
+- [x] Crime scene Phaser scene with clickable evidence
+- [x] Hypothesis Board functional with IV/DV/control tagging
+- [x] pH probe lab mini-game with universal indicator
+- [x] Data analysis screen with table + pH bars + outlier highlight + confidence slider
+- [x] Verdict + reflection flow wired end-to-end
+- [x] Scorecard rendered on case completion (IB Criteria A–D)
+- [x] Progress saved to `localStorage`
+- [ ] Mixing reaction visualization (skipped — pH analysis alone is enough to solve)
+- [ ] Cases 2, 3, 4
+
+## Deploying to Netlify
+
+A `netlify.toml` at the repo root pre-configures the build (Node 20, `npm run build`, publish `dist/`, SPA redirect). Easiest deploy path:
+
+1. Push this branch (or merge to `main`) on GitHub.
+2. In the Netlify dashboard → **Add new site → Import an existing project → GitHub**.
+3. Pick this repo and the branch you want to deploy. Netlify will read `netlify.toml` and fill in the build settings automatically — just click **Deploy**.
+4. After the first deploy, every push to that branch redeploys automatically.
+
+If you'd rather use the Netlify CLI from your own machine:
+
+```bash
+npm install -g netlify-cli
+netlify login          # opens a browser
+netlify init           # link this repo to a Netlify site
+netlify deploy --prod  # production deploy
+```
 
 ## Claude Code on the web
 
