@@ -1,77 +1,83 @@
-import { useMemo, useState } from 'react';
-import type { Case, HypothesisTemplate } from '../cases/types';
+import { useCallback, useState } from 'react';
+import type { AiGrade, Case } from '../cases/types';
+import { gradeAnswer } from '../lib/aiGrader';
+import { AiFeedbackPanel } from './AiFeedbackPanel';
 
 interface HypothesisBoardProps {
   activeCase: Case;
-  initialSelected?: string[];
   minRequired?: number;
-  onSubmit: (selectedIds: string[]) => void;
+  onSubmit: (cards: HypothesisCard[]) => void;
 }
 
-interface DraftHypothesis {
-  ifPart: string;
-  thenPart: string;
-  becausePart: string;
-  independentVariable: string;
-  dependentVariable: string;
+export interface HypothesisCard {
+  id: string;
+  text: string;
+  iv: string;
+  dv: string;
   control: string;
+  grade: AiGrade | null;
 }
 
-const EMPTY_DRAFT: DraftHypothesis = {
-  ifPart: '',
-  thenPart: '',
-  becausePart: '',
-  independentVariable: '',
-  dependentVariable: '',
+const EMPTY = (id: string): HypothesisCard => ({
+  id,
+  text: '',
+  iv: '',
+  dv: '',
   control: '',
-};
+  grade: null,
+});
 
 export function HypothesisBoard({
   activeCase,
-  initialSelected = [],
   minRequired = 2,
   onSubmit,
 }: HypothesisBoardProps) {
-  const [selectedIds, setSelectedIds] = useState<string[]>(initialSelected);
-  const [draft, setDraft] = useState<DraftHypothesis>(EMPTY_DRAFT);
+  const [cards, setCards] = useState<HypothesisCard[]>(() => [EMPTY('h1'), EMPTY('h2')]);
+  const [pending, setPending] = useState<Set<string>>(new Set());
   const [showHelp, setShowHelp] = useState(false);
 
-  const templates = activeCase.hypothesisTemplates;
-
-  const canSubmit = selectedIds.length >= minRequired;
-
-  const draftIsComplete = useMemo(
-    () =>
-      Boolean(
-        draft.ifPart.trim() &&
-          draft.thenPart.trim() &&
-          draft.becausePart.trim() &&
-          draft.independentVariable.trim() &&
-          draft.dependentVariable.trim() &&
-          draft.control.trim(),
-      ),
-    [draft],
-  );
-
-  function toggle(id: string) {
-    setSelectedIds((current) =>
-      current.includes(id) ? current.filter((x) => x !== id) : [...current, id],
+  function update(id: string, patch: Partial<HypothesisCard>) {
+    setCards((current) =>
+      current.map((c) => (c.id === id ? { ...c, ...patch } : c)),
     );
   }
 
-  function handleSubmit() {
-    if (!canSubmit) return;
-    onSubmit(selectedIds);
-  }
+  const handleGrade = useCallback(
+    async (card: HypothesisCard) => {
+      setPending((s) => new Set(s).add(card.id));
+      const grade = await gradeAnswer({
+        type: 'hypothesis',
+        criterion: 'B',
+        caseTitle: activeCase.title,
+        caseStory: activeCase.story,
+        answer: card.text,
+        iv: card.iv,
+        dv: card.dv,
+        control: card.control,
+      });
+      update(card.id, { grade });
+      setPending((s) => {
+        const n = new Set(s);
+        n.delete(card.id);
+        return n;
+      });
+    },
+    [activeCase],
+  );
+
+  const cardsComplete = cards.filter(
+    (c) => c.text.trim() && c.iv.trim() && c.dv.trim() && c.control.trim(),
+  );
+  const canSubmit = cardsComplete.length >= minRequired;
 
   return (
     <section className="panel">
-      <header className="mb-4 flex items-center justify-between">
+      <header className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold text-detective-paper">Hypothesis Board</h2>
           <p className="text-sm text-detective-paper/70">
-            Pick at least {minRequired} testable hypotheses. Identify your variables before heading
-            to the lab.
+            Write {minRequired} testable hypotheses for what caused the principal's symptoms.
+            Get AI feedback before submitting if you want.
           </p>
         </div>
         <button className="btn-ghost text-xs" onClick={() => setShowHelp((v) => !v)}>
@@ -84,84 +90,44 @@ export function HypothesisBoard({
           <p className="font-semibold text-detective-amber">If… then… because…</p>
           <ul className="ml-4 list-disc space-y-1">
             <li>
-              <span className="font-semibold">Independent variable:</span> what you change.
+              <span className="font-semibold">Independent variable (IV):</span> what you change or
+              test (e.g., the identity of the liquid).
             </li>
             <li>
-              <span className="font-semibold">Dependent variable:</span> what you measure.
+              <span className="font-semibold">Dependent variable (DV):</span> what you measure
+              (e.g., the pH reading).
             </li>
             <li>
-              <span className="font-semibold">Control:</span> what you keep constant or compare
-              against.
+              <span className="font-semibold">Control:</span> a known reference (e.g., distilled
+              water, pH 7).
             </li>
           </ul>
         </div>
       )}
 
-      <ul className="space-y-2">
-        {templates.map((t) => (
-          <HypothesisRow
-            key={t.id}
-            template={t}
-            selected={selectedIds.includes(t.id)}
-            onToggle={() => toggle(t.id)}
-          />
+      <ol className="space-y-4">
+        {cards.map((card, i) => (
+          <li key={card.id}>
+            <CardEditor
+              index={i}
+              card={card}
+              loading={pending.has(card.id)}
+              onChange={(patch) => update(card.id, patch)}
+              onGrade={() => handleGrade(card)}
+            />
+          </li>
         ))}
-      </ul>
+      </ol>
 
-      <details className="mt-4 rounded-md border border-detective-slate p-3">
-        <summary className="cursor-pointer text-sm font-semibold text-detective-amber">
-          Write your own
-        </summary>
-        <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
-          <input
-            className="rounded-md bg-detective-ink p-2 text-sm"
-            placeholder="If… (independent variable)"
-            value={draft.ifPart}
-            onChange={(e) => setDraft({ ...draft, ifPart: e.target.value })}
-          />
-          <input
-            className="rounded-md bg-detective-ink p-2 text-sm"
-            placeholder="then… (dependent variable)"
-            value={draft.thenPart}
-            onChange={(e) => setDraft({ ...draft, thenPart: e.target.value })}
-          />
-          <input
-            className="col-span-full rounded-md bg-detective-ink p-2 text-sm"
-            placeholder="because… (reasoning)"
-            value={draft.becausePart}
-            onChange={(e) => setDraft({ ...draft, becausePart: e.target.value })}
-          />
-          <input
-            className="rounded-md bg-detective-ink p-2 text-sm"
-            placeholder="Independent variable"
-            value={draft.independentVariable}
-            onChange={(e) => setDraft({ ...draft, independentVariable: e.target.value })}
-          />
-          <input
-            className="rounded-md bg-detective-ink p-2 text-sm"
-            placeholder="Dependent variable"
-            value={draft.dependentVariable}
-            onChange={(e) => setDraft({ ...draft, dependentVariable: e.target.value })}
-          />
-          <input
-            className="col-span-full rounded-md bg-detective-ink p-2 text-sm"
-            placeholder="Control"
-            value={draft.control}
-            onChange={(e) => setDraft({ ...draft, control: e.target.value })}
-          />
-          <p className="col-span-full text-xs text-detective-paper/60">
-            {draftIsComplete
-              ? 'Draft looks well-formed. (Custom hypotheses are not yet scored — pick the closest template above.)'
-              : 'Fill all six fields to practice writing a complete hypothesis.'}
-          </p>
-        </div>
-      </details>
-
-      <footer className="mt-4 flex items-center justify-between">
+      <footer className="mt-5 flex items-center justify-between">
         <p className="text-sm text-detective-paper/70">
-          Selected: <span className="readout">{selectedIds.length}</span> / minimum {minRequired}
+          Filled: <span className="readout">{cardsComplete.length}</span> / {minRequired}
         </p>
-        <button className="btn-primary" disabled={!canSubmit} onClick={handleSubmit}>
+        <button
+          className="btn-primary"
+          disabled={!canSubmit}
+          onClick={() => onSubmit(cards)}
+        >
           Submit hypotheses
         </button>
       </footer>
@@ -169,42 +135,88 @@ export function HypothesisBoard({
   );
 }
 
-function HypothesisRow({
-  template,
-  selected,
-  onToggle,
-}: {
-  template: HypothesisTemplate;
-  selected: boolean;
-  onToggle: () => void;
-}) {
+interface CardEditorProps {
+  index: number;
+  card: HypothesisCard;
+  loading: boolean;
+  onChange: (patch: Partial<HypothesisCard>) => void;
+  onGrade: () => void;
+}
+
+function CardEditor({ index, card, loading, onChange, onGrade }: CardEditorProps) {
+  const canGrade =
+    card.text.trim().length >= 10 &&
+    card.iv.trim() &&
+    card.dv.trim() &&
+    card.control.trim();
+
   return (
-    <li>
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-pressed={selected}
-        className={`w-full rounded-md border p-3 text-left transition ${
-          selected
-            ? 'border-detective-amber bg-detective-amber/10'
-            : 'border-detective-slate hover:border-detective-amber/60'
-        }`}
-      >
-        <p className="text-sm text-detective-paper">{template.text}</p>
-        <div className="mt-2 flex flex-wrap gap-3 text-xs text-detective-paper/70">
-          <Tag label="IV" value={template.independentVariable} />
-          <Tag label="DV" value={template.dependentVariable} />
-          <Tag label="Control" value={template.control} />
-        </div>
-      </button>
-    </li>
+    <div className="rounded-md border border-detective-slate bg-detective-ink/40 p-3">
+      <p className="mb-2 text-sm font-semibold text-detective-amber">Hypothesis {index + 1}</p>
+      <textarea
+        rows={3}
+        className="w-full rounded-md bg-detective-ink p-2 text-sm"
+        placeholder="If [variable changes], then [you observe], because [scientific reason]…"
+        value={card.text}
+        onChange={(e) => onChange({ text: e.target.value, grade: null })}
+      />
+      <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-3">
+        <LabeledInput
+          label="IV"
+          placeholder="What you change"
+          value={card.iv}
+          onChange={(v) => onChange({ iv: v, grade: null })}
+        />
+        <LabeledInput
+          label="DV"
+          placeholder="What you measure"
+          value={card.dv}
+          onChange={(v) => onChange({ dv: v, grade: null })}
+        />
+        <LabeledInput
+          label="Control"
+          placeholder="Known reference"
+          value={card.control}
+          onChange={(v) => onChange({ control: v, grade: null })}
+        />
+      </div>
+      <div className="mt-3 flex items-center justify-end gap-2">
+        <button
+          className="btn-ghost text-xs"
+          disabled={!canGrade || loading}
+          onClick={onGrade}
+        >
+          {card.grade ? 'Re-grade' : 'Get AI feedback'}
+        </button>
+      </div>
+      <AiFeedbackPanel grade={card.grade} loading={loading} />
+    </div>
   );
 }
 
-function Tag({ label, value }: { label: string; value: string }) {
+function LabeledInput({
+  label,
+  placeholder,
+  value,
+  onChange,
+}: {
+  label: string;
+  placeholder: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
   return (
-    <span className="rounded bg-detective-slate/70 px-2 py-1">
-      <span className="font-semibold text-detective-amber">{label}:</span> {value}
-    </span>
+    <label className="block text-xs">
+      <span className="mb-1 block font-semibold uppercase tracking-wider text-detective-amber">
+        {label}
+      </span>
+      <input
+        type="text"
+        className="w-full rounded-md bg-detective-ink p-2 text-sm"
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </label>
   );
 }

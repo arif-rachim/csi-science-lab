@@ -77,6 +77,14 @@ export interface Case {
   estimatedMinutes: number;
 }
 
+export interface AiGrade {
+  score: 0 | 1 | 2;
+  feedback: string;
+  strengths: string[];
+  improvements: string[];
+  provider: 'gemini' | 'stub';
+}
+
 export interface PlayerProgress {
   caseId: string;
   hypothesesSubmitted: string[];

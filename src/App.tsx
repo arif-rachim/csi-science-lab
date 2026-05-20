@@ -153,25 +153,23 @@ function CrimeScenePhase() {
 function HypothesisPhase() {
   const setPhase = useGameStore((s) => s.setPhase);
   const submitHypotheses = useGameStore((s) => s.submitHypotheses);
-  const submittedSoFar = useGameStore((s) => s.hypothesesSubmitted);
+  const setHypothesisGrades = useGameStore((s) => s.setHypothesisGrades);
 
   const handleSubmit = useCallback(
-    (ids: string[]) => {
-      submitHypotheses(ids);
-      EventBus.emit(GameEvents.HypothesisSubmitted, { ids });
+    (cards: import('./ui/HypothesisBoard').HypothesisCard[]) => {
+      submitHypotheses(cards.map((c) => c.id));
+      const grades = cards.map((c) => c.grade).filter((g): g is import('./cases/types').AiGrade => g !== null);
+      setHypothesisGrades(grades);
+      EventBus.emit(GameEvents.HypothesisSubmitted, { count: cards.length });
       setPhase('lab');
     },
-    [submitHypotheses, setPhase],
+    [submitHypotheses, setHypothesisGrades, setPhase],
   );
 
   return (
     <div className="grid gap-4 md:grid-cols-3">
       <div className="md:col-span-2">
-        <HypothesisBoard
-          activeCase={caseOne}
-          initialSelected={submittedSoFar}
-          onSubmit={handleSubmit}
-        />
+        <HypothesisBoard activeCase={caseOne} onSubmit={handleSubmit} />
       </div>
       <JournalSidebar />
     </div>
@@ -234,15 +232,19 @@ function AnalysisPhase() {
 
 function VerdictPhase() {
   const setVerdict = useGameStore((s) => s.setVerdict);
+  const setVerdictGrade = useGameStore((s) => s.setVerdictGrade);
   const setPhase = useGameStore((s) => s.setPhase);
+  const phReadings = useGameStore((s) => s.phReadings);
 
   return (
     <div className="grid gap-4 md:grid-cols-3">
       <div className="md:col-span-2">
         <VerdictPanel
           activeCase={caseOne}
-          onSubmit={(suspectId) => {
-            setVerdict(suspectId);
+          readings={phReadings}
+          onSubmit={(suspectId, reasoning, grade) => {
+            setVerdict(suspectId, reasoning);
+            setVerdictGrade(grade);
             EventBus.emit(GameEvents.VerdictSubmitted, { suspectId });
             setPhase('reflection');
           }}
@@ -260,20 +262,29 @@ function ReflectionPhase() {
 
   const evidenceCollected = useGameStore((s) => s.evidenceCollected);
   const hypothesesSubmitted = useGameStore((s) => s.hypothesesSubmitted);
+  const hypothesisGrades = useGameStore((s) => s.hypothesisGrades);
   const testsPerformed = useGameStore((s) => s.testsPerformed);
   const finalVerdict = useGameStore((s) => s.finalVerdict);
+  const verdictGrade = useGameStore((s) => s.verdictGrade);
+  const confidence = useGameStore((s) => s.confidence);
+  const setReflectionGradeStore = useGameStore((s) => s.setReflectionGrade);
 
   const handleComplete = useCallback(
-    (answers: Record<string, string>) => {
+    (answers: Record<string, string>, grades: Record<string, import('./cases/types').AiGrade>) => {
       setReflections(answers);
+      Object.entries(grades).forEach(([qid, grade]) => setReflectionGradeStore(qid, grade));
 
       const input = {
         case: caseOne,
         evidenceCollected,
         hypothesesSubmitted,
+        hypothesisGrades,
         testsPerformed,
         finalVerdict,
+        verdictGrade,
         reflections: answers,
+        reflectionGrades: grades,
+        confidence,
       };
       const scores = scoreCase(input);
       const progress = buildProgress(caseOne.id, input, scores);
@@ -283,22 +294,23 @@ function ReflectionPhase() {
     },
     [
       setReflections,
+      setReflectionGradeStore,
       completeCase,
       setPhase,
       evidenceCollected,
       hypothesesSubmitted,
+      hypothesisGrades,
       testsPerformed,
       finalVerdict,
+      verdictGrade,
+      confidence,
     ],
   );
 
   return (
     <div className="grid gap-4 md:grid-cols-3">
       <div className="md:col-span-2">
-        <ReflectionDialog
-          questions={caseOne.reflectionQuestions}
-          onComplete={handleComplete}
-        />
+        <ReflectionDialog activeCase={caseOne} onComplete={handleComplete} />
       </div>
       <JournalSidebar />
     </div>

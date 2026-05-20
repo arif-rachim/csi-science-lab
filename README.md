@@ -49,11 +49,34 @@ src/
 
 ```bash
 npm install
-npm run dev      # http://localhost:5173
+npm run dev      # http://localhost:5173 — AI grading uses the local stub
 npm run build    # type-check + production bundle
 npm run lint     # ESLint
 npm run preview  # serve the production build locally
 ```
+
+To exercise the real Gemini-backed grading function locally, run with the Netlify CLI:
+
+```bash
+npm install -g netlify-cli
+cp .env.example .env       # fill in GEMINI_API_KEY
+netlify dev                # serves Vite + the /api/grade function together
+```
+
+## AI grading
+
+Every text input the student writes (hypothesis statements, verdict reasoning, reflection answers) can be sent to an AI grader that returns a 0–2 score plus warm formative feedback aligned to the relevant IB criterion. The verdict reasoning is **gated** — a score of 0 blocks submission until the student revises.
+
+Architecture:
+
+- `netlify/functions/grade.ts` — Netlify Function that calls Gemini 2.0 Flash via `@google/genai` with a `response_schema` enforcing structured JSON. Reads `GEMINI_API_KEY` from env.
+- `src/lib/aiGrader.ts` — client helper that POSTs to `/api/grade`. If the function is unreachable (`npm run dev` without `netlify dev`) or the key is missing, both server and client fall back to a deterministic stub that still returns sensible feedback so the UI flow remains testable.
+- `src/ui/AiFeedbackPanel.tsx` — shared feedback UI with score badge, strengths, and "next step" lists.
+- `src/lib/ibCriteria.ts` — score formulas combine programmatic checks (verdict correctness, samples tested, confidence calibration) with AI grades into the final 0–8 per-criterion scorecard.
+
+Get a Gemini API key at https://aistudio.google.com/apikey (free tier includes 1,500 requests/day). On Netlify, set `GEMINI_API_KEY` under **Site settings → Environment variables**.
+
+> **Privacy note:** Gemini's free tier may use submitted prompts for model training. For real classroom deployment with student data, upgrade to a paid tier or swap the SDK call to a provider with a "no training on inputs" guarantee.
 
 ## Adding a new case
 
