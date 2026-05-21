@@ -79,7 +79,7 @@ Without a key, the game still works — `src/lib/aiGrader.ts` falls back to a de
 Implementation:
 
 - `src/lib/aiKey.ts` — thin localStorage wrapper (`getApiKey` / `setApiKey` / `hasApiKey`).
-- `src/lib/aiGrader.ts` — builds the rubric prompt for each input type, calls `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=…` with a `response_schema` enforcing structured JSON.
+- `src/lib/aiGrader.ts` — builds the rubric prompt for each input type, calls `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=…` with a `response_schema` enforcing structured JSON.
 - `src/ui/AiSettings.tsx` — settings panel with key paste box, show/hide toggle, and clear-key action.
 - `src/lib/ibCriteria.ts` — combines AI scores with programmatic checks (verdict correctness, samples tested, confidence calibration) into the 0–8 per-criterion scorecard.
 
