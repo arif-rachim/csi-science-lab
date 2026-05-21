@@ -9,7 +9,7 @@ An educational browser-based game for Grade 9 IB MYP students. Players act as ju
 - **Vite** + **React 19** + **TypeScript** — UI layer and dev tooling
 - **Tailwind CSS v3** — styling
 - **Zustand** — game state
-- **Google Gemini 2.0 Flash** (via `@google/genai` + Netlify Functions) — formative AI feedback on every text input
+- **Google Gemini 2.0 Flash** (BYOK — browser calls the REST API directly with a per-player key stored in localStorage) — formative AI feedback on every text input
 - **VT323** font (Google Fonts) — for the retro CRT terminal look
 
 No Phaser, no canvas, no game engine. The game is built as a retro-CRT *text adventure* with typewriter narration, scanlines, blinking cursor, and ASCII frames. Gameplay is driven by narrative choice and scientific reasoning, not graphics or animation.
@@ -33,12 +33,16 @@ src/
 │   ├── EvidenceTray.tsx
 │   ├── ScientistJournal.tsx
 │   ├── PhaseStepper.tsx
+│   ├── AiSettings.tsx          # settings panel for per-player Gemini key
 │   └── Confetti.tsx
 ├── cases/                      # data-driven case definitions
 │   ├── types.ts
 │   └── case-01-poisoned-principal.ts
 ├── lib/
 │   ├── ibCriteria.ts           # scoring logic per IB criterion
+│   ├── aiGrader.ts             # browser-direct Gemini REST call + stub fallback
+│   ├── aiKey.ts                # localStorage wrapper for the player's Gemini key
+│   ├── audio.ts                # Web Audio API soundtrack (drone + clicks + stings)
 │   └── progress.ts             # localStorage save/load
 ├── store/
 │   └── gameStore.ts            # Zustand store
@@ -50,34 +54,36 @@ src/
 
 ```bash
 npm install
-npm run dev      # http://localhost:5173 — AI grading uses the local stub
+npm run dev      # http://localhost:5173
 npm run build    # type-check + production bundle
 npm run lint     # ESLint
 npm run preview  # serve the production build locally
 ```
 
-To exercise the real Gemini-backed grading function locally, run with the Netlify CLI:
+No environment variables, no functions, no backend. The site is a pure static SPA — deploy with `npm run build` and ship `dist/` anywhere.
 
-```bash
-npm install -g netlify-cli
-cp .env.example .env       # fill in GEMINI_API_KEY
-netlify dev                # serves Vite + the /api/grade function together
-```
+## AI grading (Bring Your Own Key)
 
-## AI grading
+Every text input the student writes (hypothesis statements, verdict reasoning, reflection answers) can be sent to Google Gemini for a 0–2 score plus warm formative feedback aligned to the relevant IB criterion. The verdict reasoning is **gated** — a score of 0 blocks submission until the student revises.
 
-Every text input the student writes (hypothesis statements, verdict reasoning, reflection answers) can be sent to an AI grader that returns a 0–2 score plus warm formative feedback aligned to the relevant IB criterion. The verdict reasoning is **gated** — a score of 0 blocks submission until the student revises.
+There is no server. The browser calls Gemini's REST API directly using a Gemini API key the player pastes into the **AI key** settings panel on the main menu. The key lives only in that player's `localStorage` and never leaves their device (except as the `key=` query parameter on the call to Google).
 
-Architecture:
+How a player turns AI grading on:
 
-- `netlify/functions/grade.ts` — Netlify Function that calls Gemini 2.0 Flash via `@google/genai` with a `response_schema` enforcing structured JSON. Reads `GEMINI_API_KEY` from env.
-- `src/lib/aiGrader.ts` — client helper that POSTs to `/api/grade`. If the function is unreachable (`npm run dev` without `netlify dev`) or the key is missing, both server and client fall back to a deterministic stub that still returns sensible feedback so the UI flow remains testable.
-- `src/ui/AiFeedbackPanel.tsx` — shared feedback UI with score badge, strengths, and "next step" lists.
-- `src/lib/ibCriteria.ts` — score formulas combine programmatic checks (verdict correctness, samples tested, confidence calibration) with AI grades into the final 0–8 per-criterion scorecard.
+1. Visit [https://aistudio.google.com/apikey](https://aistudio.google.com/apikey) and create a free key (free tier includes 1,500 requests/day).
+2. Open **CSI: Science Lab** → main menu → **[K] AI key** → paste the key → **Save**.
+3. The status pill flips to `[●] Gemini ON`. Play normally — grading buttons in the Hypothesis Board, Verdict Panel, and Reflection now call Gemini.
 
-Get a Gemini API key at https://aistudio.google.com/apikey (free tier includes 1,500 requests/day). On Netlify, set `GEMINI_API_KEY` under **Site settings → Environment variables**.
+Without a key, the game still works — `src/lib/aiGrader.ts` falls back to a deterministic stub that produces sensible feedback based on length and keyword heuristics so the UI flow stays testable.
 
-> **Privacy note:** Gemini's free tier may use submitted prompts for model training. For real classroom deployment with student data, upgrade to a paid tier or swap the SDK call to a provider with a "no training on inputs" guarantee.
+Implementation:
+
+- `src/lib/aiKey.ts` — thin localStorage wrapper (`getApiKey` / `setApiKey` / `hasApiKey`).
+- `src/lib/aiGrader.ts` — builds the rubric prompt for each input type, calls `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=…` with a `response_schema` enforcing structured JSON.
+- `src/ui/AiSettings.tsx` — settings panel with key paste box, show/hide toggle, and clear-key action.
+- `src/lib/ibCriteria.ts` — combines AI scores with programmatic checks (verdict correctness, samples tested, confidence calibration) into the 0–8 per-criterion scorecard.
+
+> **Privacy note:** Gemini's free tier may use submitted prompts for model training. For real classroom deployment with student data, upgrade to a paid Gemini tier or use a provider with a "no training on inputs" guarantee.
 
 ## Adding a new case
 

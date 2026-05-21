@@ -11,11 +11,13 @@ import { PhaseStepper } from './ui/PhaseStepper';
 import { Confetti } from './ui/Confetti';
 import { Typewriter } from './ui/Typewriter';
 import { CrimeSceneText } from './ui/CrimeSceneText';
+import { AiSettings } from './ui/AiSettings';
 import { caseOne } from './cases/case-01-poisoned-principal';
 import { useGameStore } from './store/gameStore';
 import { buildProgress, scoreCase } from './lib/ibCriteria';
 import { loadProgress, saveProgress } from './lib/progress';
 import { audio } from './lib/audio';
+import { hasApiKey } from './lib/aiKey';
 import type { AiGrade, CasePhase, PhReading } from './cases/types';
 
 function App() {
@@ -482,46 +484,62 @@ Bu Sari does not look at you when you leave.`}
 
 function MainMenu({ onStart }: { onStart: () => void }) {
   const lastProgress = useMemo(() => loadProgress(caseOne.id), []);
+  const [showSettings, setShowSettings] = useState(false);
   return (
-    <main className="crt-flicker mx-auto flex min-h-full max-w-3xl flex-col items-center justify-center p-6 text-center">
-      <pre className="text-crt-dim text-xs leading-tight">{`
+    <main className="mx-auto max-w-3xl space-y-6 p-6">
+      <div className="flex flex-col items-center text-center">
+        <pre className="text-crt-dim text-xs leading-tight">{`
    ░█▀▀░█▀▀░▀█▀░░░░█▀▀░█▀▀░▀█▀░█▀▀░█▀█░█▀▀░█▀▀░░░█░░░█▀█░█▀▄
    ░█░░░▀▀█░░█░░▀▀░▀▀█░█░░░░█░░█▀▀░█░█░█░░░█▀▀░░░█░░░█▀█░█▀▄
    ░▀▀▀░▀▀▀░▀▀▀░░░░▀▀▀░▀▀▀░▀▀▀░▀▀▀░▀░▀░▀▀▀░▀▀▀░░░▀▀▀░▀░▀░▀▀░
 `}</pre>
-      <p className="mb-2 text-xs uppercase tracking-[0.4em] text-crt-dim">
-        IB MYP Year 4 · Sciences · Forensics Lab
-      </p>
-      <h1 className="mb-3 text-3xl uppercase text-crt-bright text-glow-strong md:text-4xl">
-        Solve the case using the scientific method
-      </h1>
-      <p className="mb-8 max-w-xl text-crt-fg/85">
-        You are a junior member of the Student Forensics Club. The school's
-        principal — your mentor — has been poisoned. You have twenty minutes
-        in his office before the police arrive.
-      </p>
-
-      <p className="mb-3 text-sm text-crt-dim">&gt; Available cases:</p>
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <button className="btn-primary" onClick={onStart}>
-          [1] {caseOne.title}
-        </button>
-        <button className="btn-ghost" disabled>
-          [2] Mystery in the Pond — LOCKED
-        </button>
-      </div>
-
-      <div className="mt-6 flex items-center gap-3 text-xs text-crt-dim">
-        <span>&gt; Headphones recommended.</span>
-        <MuteToggle />
-      </div>
-
-      {lastProgress?.completedAt && (
-        <p className="mt-8 border-t border-crt-rule pt-3 text-xs text-crt-dim">
-          &gt; Last attempt — A:{lastProgress.scores.A} B:{lastProgress.scores.B} C:
-          {lastProgress.scores.C} D:{lastProgress.scores.D} ·{' '}
-          {new Date(lastProgress.completedAt).toLocaleDateString()}
+        <p className="mb-2 text-xs uppercase tracking-[0.4em] text-crt-dim">
+          IB MYP Year 4 · Sciences · Forensics Lab
         </p>
+        <h1 className="mb-3 text-3xl uppercase text-crt-bright text-glow-strong md:text-4xl">
+          Solve the case using the scientific method
+        </h1>
+        <p className="mb-8 max-w-xl text-crt-fg/85">
+          You are a junior member of the Student Forensics Club. The school's
+          principal — your mentor — has been poisoned. You have twenty minutes
+          in his office before the police arrive.
+        </p>
+
+        <p className="mb-3 text-sm text-crt-dim">&gt; Available cases:</p>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <button className="btn-primary" onClick={onStart}>
+            [1] {caseOne.title}
+          </button>
+          <button className="btn-ghost" disabled>
+            [2] Mystery in the Pond — LOCKED
+          </button>
+        </div>
+
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3 text-xs text-crt-dim">
+          <span>&gt; Headphones recommended.</span>
+          <MuteToggle />
+          <button
+            className="btn-ghost text-xs"
+            onClick={() => setShowSettings((v) => !v)}
+          >
+            {showSettings ? '[K] Hide AI key' : '[K] AI key'}{' '}
+            {hasApiKey() ? '· ●' : '· ○'}
+          </button>
+        </div>
+
+        {lastProgress?.completedAt && (
+          <p className="mt-8 border-t border-crt-rule pt-3 text-xs text-crt-dim">
+            &gt; Last attempt — A:{lastProgress.scores.A} B:{lastProgress.scores.B} C:
+            {lastProgress.scores.C} D:{lastProgress.scores.D} ·{' '}
+            {new Date(lastProgress.completedAt).toLocaleDateString()}
+          </p>
+        )}
+      </div>
+
+      {showSettings && (
+        <div className="animate-slide-in-up text-left">
+          <AiSettings onClose={() => setShowSettings(false)} />
+        </div>
       )}
     </main>
   );
