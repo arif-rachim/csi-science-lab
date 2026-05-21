@@ -11,6 +11,7 @@
 
   html {
     background: #0a0500;
+    font-size: 22px;
   }
 
   body {
@@ -22,9 +23,8 @@
       Menlo,
       Monaco,
       monospace;
-    font-size: 18px;
-    line-height: 1.45;
-    text-shadow: 0 0 6px rgba(245, 185, 69, 0.55);
+    line-height: 1.4;
+    text-shadow: 0 0 1.5px rgba(245, 185, 69, 0.4);
   }
 
   ::selection {
@@ -38,7 +38,7 @@
     @apply bg-crt-bg text-crt-bright placeholder:text-crt-dim;
     font-family: inherit;
     font-size: 1em;
-    text-shadow: 0 0 4px rgba(255, 217, 122, 0.45);
+    text-shadow: none;
     caret-color: #ffd97a;
   }
 }
@@ -116,23 +116,12 @@
     animation: flash-red 0.6s ease-out;
   }
   .text-glow-strong {
-    text-shadow: 0 0 10px currentColor, 0 0 18px currentColor;
+    text-shadow: 0 0 2px currentColor, 0 0 6px rgba(255, 217, 122, 0.35);
   }
 }
 
 .scanlines {
-  position: fixed;
-  inset: 0;
-  background: repeating-linear-gradient(
-    to bottom,
-    transparent 0,
-    transparent 2px,
-    rgba(0, 0, 0, 0.28) 2px,
-    rgba(0, 0, 0, 0.28) 3px
-  );
-  pointer-events: none;
-  z-index: 1000;
-  mix-blend-mode: multiply;
+  display: none;
 }
 
 .vignette {
@@ -140,8 +129,8 @@
   inset: 0;
   background: radial-gradient(
     ellipse at center,
-    transparent 40%,
-    rgba(0, 0, 0, 0.55) 100%
+    transparent 60%,
+    rgba(0, 0, 0, 0.3) 100%
   );
   pointer-events: none;
   z-index: 1001;
@@ -149,14 +138,10 @@
 
 @keyframes flicker {
   0%, 100% { opacity: 1; }
-  6% { opacity: 0.94; }
-  7% { opacity: 1; }
-  43% { opacity: 0.97; }
-  44% { opacity: 1; }
 }
 
 .crt-flicker {
-  animation: flicker 8s infinite;
+  /* flicker disabled for readability */
 }
 
 .cursor::after {
