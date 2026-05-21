@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { HypothesisBoard, type HypothesisCard } from './ui/HypothesisBoard';
 import { EvidenceTray } from './ui/EvidenceTray';
 import { ScientistJournal } from './ui/ScientistJournal';
@@ -15,26 +15,78 @@ import { caseOne } from './cases/case-01-poisoned-principal';
 import { useGameStore } from './store/gameStore';
 import { buildProgress, scoreCase } from './lib/ibCriteria';
 import { loadProgress, saveProgress } from './lib/progress';
-import type { AiGrade, PhReading } from './cases/types';
+import { audio } from './lib/audio';
+import type { AiGrade, CasePhase, PhReading } from './cases/types';
 
 function App() {
   const phase = useGameStore((s) => s.phase);
   const activeCaseId = useGameStore((s) => s.activeCaseId);
   const startCase = useGameStore((s) => s.startCase);
   const resetCase = useGameStore((s) => s.resetCase);
+  const finalVerdict = useGameStore((s) => s.finalVerdict);
+
+  usePhaseAudio(phase, finalVerdict);
+
+  const handleStart = () => {
+    audio.ensure();
+    startCase(caseOne.id);
+  };
+
+  const handleExit = () => {
+    audio.stopDrone();
+    resetCase();
+  };
 
   return (
     <>
       <ScreenOverlays />
       {phase === 'menu' || !activeCaseId ? (
-        <MainMenu onStart={() => startCase(caseOne.id)} />
+        <MainMenu onStart={handleStart} />
       ) : (
         <main className="crt-flicker mx-auto max-w-5xl space-y-4 p-3 md:p-6">
-          <CaseHeader onExit={resetCase} />
+          <CaseHeader onExit={handleExit} />
           <CasePhaseRouter />
         </main>
       )}
     </>
+  );
+}
+
+function usePhaseAudio(phase: CasePhase, finalVerdict: string | null) {
+  useEffect(() => {
+    if (phase === 'intro') {
+      audio.startDrone();
+    } else if (phase === 'menu') {
+      audio.stopDrone();
+    }
+  }, [phase]);
+
+  useEffect(() => {
+    if (phase === 'verdict') audio.sting('suspense');
+  }, [phase]);
+
+  useEffect(() => {
+    if (phase === 'complete') {
+      const correct = finalVerdict === caseOne.correctVerdict;
+      audio.sting(correct ? 'win' : 'fail');
+    }
+  }, [phase, finalVerdict]);
+}
+
+function MuteToggle() {
+  const [muted, setMuted] = useState(audio.isMuted());
+  return (
+    <button
+      className="btn-ghost text-xs"
+      onClick={() => {
+        const next = !muted;
+        audio.setMuted(next);
+        setMuted(next);
+      }}
+      title={muted ? 'Sound off — click to enable' : 'Sound on — click to mute'}
+    >
+      {muted ? '[M] ♪ OFF' : '[M] ♪ ON'}
+    </button>
   );
 }
 
@@ -62,6 +114,7 @@ function CaseHeader({ onExit }: { onExit: () => void }) {
           <p className="text-xs text-crt-dim">{caseOne.subtitle}</p>
         </div>
         <div className="flex items-center gap-2">
+          <MuteToggle />
           <button className="btn-ghost text-xs" onClick={onExit}>
             [Q] Log out
           </button>
@@ -456,6 +509,11 @@ function MainMenu({ onStart }: { onStart: () => void }) {
         <button className="btn-ghost" disabled>
           [2] Mystery in the Pond — LOCKED
         </button>
+      </div>
+
+      <div className="mt-6 flex items-center gap-3 text-xs text-crt-dim">
+        <span>&gt; Headphones recommended.</span>
+        <MuteToggle />
       </div>
 
       {lastProgress?.completedAt && (

@@ -20,7 +20,7 @@ export function CrimeSceneText({ activeCase, collectedIds, onCollect }: CrimeSce
 
   return (
     <section className="panel-titled space-y-4" data-title="The Office · 03:47 JKT">
-      <Typewriter text={activeCase.briefing} speed={8} onDone={() => setBriefingDone(true)} />
+      <Typewriter text={activeCase.briefing} speed={22} onDone={() => setBriefingDone(true)} />
 
       {briefingDone && (
         <div className="animate-slide-in-up space-y-3">
@@ -59,7 +59,7 @@ export function CrimeSceneText({ activeCase, collectedIds, onCollect }: CrimeSce
                 &gt; Examining
               </p>
               <p className="mb-1 text-crt-bright">{selected.name}</p>
-              <Typewriter text={selected.description} speed={6} />
+              <Typewriter text={selected.description} speed={16} />
               {collectedIds.includes(selected.id) && (
                 <p className="mt-2 text-crt-ok">{'>'} Logged to evidence tray.</p>
               )}
