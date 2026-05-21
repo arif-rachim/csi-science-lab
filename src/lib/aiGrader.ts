@@ -37,7 +37,7 @@ const CRITERION_DESCRIPTIONS: Record<Criterion, string> = {
   D: 'Reflecting on Impacts — connects science to ethical, real-world, or environmental impact.',
 };
 
-const SYSTEM_INSTRUCTION = `You are an IB MYP Year 4 Sciences teacher giving formative feedback to a 14-15 year old student playing a forensic-science learning game called "CSI: Science Lab". The student is working on Case 1: a school principal who collapsed after drinking coffee that was tampered with a strong acid.
+const SYSTEM_INSTRUCTION = `You are an IB MYP Year 4 Sciences teacher giving formative feedback to a 14-15 year old student playing a forensic-science learning game called "CSI: Science Lab". The student investigates a different mystery each case using the scientific method. The case context (title, story, suspects, lab tools) is provided with every request.
 
 Your responses must be:
 - Warm and encouraging — never harsh or sarcastic
@@ -76,12 +76,12 @@ Independent variable they named: "${req.iv ?? ''}"
 Dependent variable they named: "${req.dv ?? ''}"
 Control they named: "${req.control ?? ''}"
 
-Evaluate: is the if-then-because structure present? Are IV, DV, and control correctly identified and appropriate for testing whether a liquid is dangerous? Score 0–2.`;
+Evaluate: is the if-then-because structure present? Are IV, DV, and control correctly identified and appropriate for the case investigation described above? Score 0–2.`;
   }
 
   if (req.type === 'verdict') {
     return `${header}
-The student must conclude which liquid caused the harm and justify it scientifically.
+The student must conclude what caused the harm in this case and justify it scientifically.
 
 Suspect they named: "${req.chosenSuspectName}"
 Correct answer: "${req.correctSuspectName}" (verdict ${req.isVerdictCorrect ? 'correct' : 'incorrect'})
@@ -90,9 +90,9 @@ Available lab readings: ${req.readingsSummary ?? 'none'}
 Student's reasoning: "${req.answer}"
 
 Evaluate the reasoning — not just whether the suspect was right. Does the reasoning:
-- cite specific pH readings or evidence,
-- explain the acid–base chemistry mechanism (e.g., strong acid causes burns),
-- compare against the distilled-water control?
+- cite specific lab readings or evidence by name,
+- explain the underlying scientific mechanism (chemistry / biology / physics as appropriate for this case),
+- compare against a control or baseline where one exists?
 Score 0–2.`;
   }
 

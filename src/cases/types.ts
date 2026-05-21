@@ -61,6 +61,28 @@ export interface PhReading {
   notes: string;
 }
 
+export type WaterStatus = 'healthy' | 'caution' | 'critical';
+
+export interface WaterReading {
+  ph: number;
+  dissolvedO2: number;
+  nitrate: number;
+  microbeDensity: number;
+  status: WaterStatus;
+  notes: string;
+}
+
+export type MicrobeClassification = 'safe' | 'caution' | 'dangerous';
+
+export interface MicroscopeReading {
+  organism: string;
+  asciiArt: string;
+  classification: MicrobeClassification;
+  notes: string;
+}
+
+export type LabMode = 'ph_probe' | 'water_panel';
+
 export type CasePhase =
   | 'menu'
   | 'intro'
@@ -86,10 +108,14 @@ export interface Case {
   evidence: Evidence[];
   labTools: LabTool[];
   hypothesisTemplates: HypothesisTemplate[];
-  phReadings: Record<string, PhReading>;
+  labMode: LabMode;
+  phReadings?: Record<string, PhReading>;
+  waterReadings?: Record<string, WaterReading>;
+  microscopeReadings?: Record<string, MicroscopeReading>;
   correctVerdict: string;
   reflectionQuestions: ReflectionQuestion[];
   estimatedMinutes: number;
+  locked?: boolean;
 }
 
 export interface AiGrade {

@@ -227,6 +227,7 @@ So show it.`,
     },
   ],
 
+  labMode: 'ph_probe',
   labTools: [
     { id: 'ph_probe', name: 'pH probe & universal indicator', unlocked: true },
     { id: 'microscope', name: 'Microscope', unlocked: false },

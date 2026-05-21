@@ -35,7 +35,7 @@ export function PhProbeLab({
   const testable = useMemo(
     () =>
       activeCase.evidence.filter(
-        (e) => collectedIds.includes(e.id) && activeCase.phReadings[e.id],
+        (e) => collectedIds.includes(e.id) && activeCase.phReadings?.[e.id],
       ),
     [activeCase, collectedIds],
   );
@@ -50,7 +50,7 @@ export function PhProbeLab({
 
   function test(id: string) {
     if (readings[id] || testing.has(id)) return;
-    const reading = activeCase.phReadings[id];
+    const reading = activeCase.phReadings?.[id];
     if (!reading) return;
 
     setTesting((s) => new Set(s).add(id));

@@ -1,15 +1,21 @@
 import { useCallback, useState } from 'react';
-import type { AiGrade, Case, PhReading } from '../cases/types';
+import type { AiGrade, Case, PhReading, WaterReading } from '../cases/types';
 import { gradeAnswer } from '../lib/aiGrader';
 import { AiFeedbackPanel } from './AiFeedbackPanel';
 
 interface VerdictPanelProps {
   activeCase: Case;
   readings: Record<string, PhReading>;
+  waterReadings?: Record<string, WaterReading>;
   onSubmit: (suspectId: string, reasoning: string, grade: AiGrade) => void;
 }
 
-export function VerdictPanel({ activeCase, readings, onSubmit }: VerdictPanelProps) {
+export function VerdictPanel({
+  activeCase,
+  readings,
+  waterReadings = {},
+  onSubmit,
+}: VerdictPanelProps) {
   const [suspectId, setSuspectId] = useState<string | null>(null);
   const [reasoning, setReasoning] = useState('');
   const [grade, setGrade] = useState<AiGrade | null>(null);
@@ -22,12 +28,19 @@ export function VerdictPanel({ activeCase, readings, onSubmit }: VerdictPanelPro
     setLoading(true);
     const chosen = activeCase.suspects.find((s) => s.id === suspectId);
     const correct = activeCase.suspects.find((s) => s.id === activeCase.correctVerdict);
-    const readingsSummary = Object.entries(readings)
+    const phSummary = Object.entries(readings)
       .map(([id, r]) => {
         const e = activeCase.evidence.find((x) => x.id === id);
         return `${e?.name ?? id}: pH ${r.ph.toFixed(1)} (${r.classification})`;
       })
       .join('; ');
+    const waterSummary = Object.entries(waterReadings)
+      .map(([id, r]) => {
+        const e = activeCase.evidence.find((x) => x.id === id);
+        return `${e?.name ?? id}: pH ${r.ph.toFixed(1)} / DO ${r.dissolvedO2.toFixed(1)} / NO3 ${r.nitrate} / microbes ${r.microbeDensity.toExponential(1)} (${r.status})`;
+      })
+      .join('; ');
+    const readingsSummary = [phSummary, waterSummary].filter(Boolean).join(' || ');
 
     const result = await gradeAnswer({
       type: 'verdict',
@@ -42,7 +55,7 @@ export function VerdictPanel({ activeCase, readings, onSubmit }: VerdictPanelPro
     });
     setGrade(result);
     setLoading(false);
-  }, [activeCase, readings, reasoning, suspectId]);
+  }, [activeCase, readings, waterReadings, reasoning, suspectId]);
 
   const canSubmit = grade !== null && grade.score >= 1;
   const needsRevision = grade !== null && grade.score === 0;

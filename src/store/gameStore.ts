@@ -1,5 +1,12 @@
 import { create } from 'zustand';
-import type { AiGrade, CasePhase, PhReading, PlayerProgress } from '../cases/types';
+import type {
+  AiGrade,
+  CasePhase,
+  MicroscopeReading,
+  PhReading,
+  PlayerProgress,
+  WaterReading,
+} from '../cases/types';
 export type { CasePhase } from '../cases/types';
 
 interface GameState {
@@ -10,6 +17,8 @@ interface GameState {
   hypothesisGrades: AiGrade[];
   testsPerformed: string[];
   phReadings: Record<string, PhReading>;
+  waterReadings: Record<string, WaterReading>;
+  microscopeReadings: Record<string, MicroscopeReading>;
   confidence: number;
   finalVerdict: string | null;
   verdictReasoning: string;
@@ -27,6 +36,8 @@ interface GameState {
   recordTest: (id: string) => void;
   recordTests: (ids: string[]) => void;
   setPhReadings: (readings: Record<string, PhReading>) => void;
+  setWaterReadings: (readings: Record<string, WaterReading>) => void;
+  setMicroscopeReadings: (readings: Record<string, MicroscopeReading>) => void;
   setConfidence: (value: number) => void;
   setVerdict: (id: string, reasoning: string) => void;
   setVerdictGrade: (grade: AiGrade | null) => void;
@@ -45,6 +56,8 @@ const initialState = {
   hypothesisGrades: [] as AiGrade[],
   testsPerformed: [] as string[],
   phReadings: {} as Record<string, PhReading>,
+  waterReadings: {} as Record<string, WaterReading>,
+  microscopeReadings: {} as Record<string, MicroscopeReading>,
   confidence: 70,
   finalVerdict: null as string | null,
   verdictReasoning: '',
@@ -87,6 +100,8 @@ export const useGameStore = create<GameState>((set) => ({
       testsPerformed: Array.from(new Set([...s.testsPerformed, ...ids])),
     })),
   setPhReadings: (readings) => set({ phReadings: readings }),
+  setWaterReadings: (readings) => set({ waterReadings: readings }),
+  setMicroscopeReadings: (readings) => set({ microscopeReadings: readings }),
   setConfidence: (value) => set({ confidence: value }),
   setVerdict: (id, reasoning) => set({ finalVerdict: id, verdictReasoning: reasoning }),
   setVerdictGrade: (grade) => set({ verdictGrade: grade }),
