@@ -27,7 +27,7 @@ export interface GradeResponse {
   provider: 'gemini' | 'stub';
 }
 
-const GEMINI_MODEL = 'gemini-2.5-flash';
+const GEMINI_MODEL = 'gemini-flash-latest';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 const CRITERION_DESCRIPTIONS: Record<Criterion, string> = {
