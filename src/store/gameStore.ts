@@ -1,15 +1,6 @@
 import { create } from 'zustand';
-import type { AiGrade, PhReading, PlayerProgress } from '../cases/types';
-
-export type CasePhase =
-  | 'menu'
-  | 'crime-scene'
-  | 'hypothesis'
-  | 'lab'
-  | 'analysis'
-  | 'verdict'
-  | 'reflection'
-  | 'complete';
+import type { AiGrade, CasePhase, PhReading, PlayerProgress } from '../cases/types';
+export type { CasePhase } from '../cases/types';
 
 interface GameState {
   activeCaseId: string | null;
@@ -70,7 +61,7 @@ export const useGameStore = create<GameState>((set) => ({
     set({
       ...initialState,
       activeCaseId: caseId,
-      phase: 'crime-scene',
+      phase: 'intro',
     }),
   setPhase: (phase) => set({ phase }),
   collectEvidence: (id) =>

@@ -1,7 +1,5 @@
-import { useCallback, useEffect, useMemo } from 'react';
-import { PhaserGame } from './game/PhaserGame';
-import { EventBus, GameEvents } from './game/EventBus';
-import { HypothesisBoard } from './ui/HypothesisBoard';
+import { useCallback, useMemo, useState } from 'react';
+import { HypothesisBoard, type HypothesisCard } from './ui/HypothesisBoard';
 import { EvidenceTray } from './ui/EvidenceTray';
 import { ScientistJournal } from './ui/ScientistJournal';
 import { PhProbeLab } from './ui/PhProbeLab';
@@ -11,10 +9,13 @@ import { ReflectionDialog } from './ui/ReflectionDialog';
 import { ScoreCard } from './ui/ScoreCard';
 import { PhaseStepper } from './ui/PhaseStepper';
 import { Confetti } from './ui/Confetti';
+import { Typewriter } from './ui/Typewriter';
+import { CrimeSceneText } from './ui/CrimeSceneText';
 import { caseOne } from './cases/case-01-poisoned-principal';
 import { useGameStore } from './store/gameStore';
 import { buildProgress, scoreCase } from './lib/ibCriteria';
 import { loadProgress, saveProgress } from './lib/progress';
+import type { AiGrade, PhReading } from './cases/types';
 
 function App() {
   const phase = useGameStore((s) => s.phase);
@@ -22,45 +23,51 @@ function App() {
   const startCase = useGameStore((s) => s.startCase);
   const resetCase = useGameStore((s) => s.resetCase);
 
-  useEvidenceBusBridge();
-
-  if (phase === 'menu' || !activeCaseId) {
-    return <MainMenu onStart={() => startCase(caseOne.id)} />;
-  }
-
   return (
-    <main className="mx-auto max-w-6xl space-y-5 p-4 md:p-8">
-      <CaseHeader onExit={resetCase} />
-      <CasePhaseRouter />
-    </main>
+    <>
+      <ScreenOverlays />
+      {phase === 'menu' || !activeCaseId ? (
+        <MainMenu onStart={() => startCase(caseOne.id)} />
+      ) : (
+        <main className="crt-flicker mx-auto max-w-5xl space-y-4 p-3 md:p-6">
+          <CaseHeader onExit={resetCase} />
+          <CasePhaseRouter />
+        </main>
+      )}
+    </>
   );
 }
 
-function useEvidenceBusBridge() {
-  const collectEvidence = useGameStore((s) => s.collectEvidence);
-  useEffect(() => {
-    const handler = (payload: { id: string }) => collectEvidence(payload.id);
-    EventBus.on(GameEvents.EvidenceCollected, handler);
-    return () => {
-      EventBus.off(GameEvents.EvidenceCollected, handler);
-    };
-  }, [collectEvidence]);
+function ScreenOverlays() {
+  return (
+    <>
+      <div className="scanlines" />
+      <div className="vignette" />
+    </>
+  );
 }
 
 function CaseHeader({ onExit }: { onExit: () => void }) {
   const phase = useGameStore((s) => s.phase);
   return (
-    <header className="flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <p className="text-xs uppercase tracking-widest text-detective-amber">Case 01 · Chemistry</p>
-        <h1 className="text-2xl font-bold text-detective-paper">{caseOne.title}</h1>
+    <header className="space-y-2">
+      <div className="flex flex-wrap items-end justify-between gap-2 border-b border-crt-rule pb-2">
+        <div>
+          <p className="text-xs uppercase tracking-[0.3em] text-crt-dim">
+            Student Forensics Club · Secure Terminal
+          </p>
+          <h1 className="text-2xl uppercase text-crt-bright text-glow-strong md:text-3xl">
+            {caseOne.title}
+          </h1>
+          <p className="text-xs text-crt-dim">{caseOne.subtitle}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button className="btn-ghost text-xs" onClick={onExit}>
+            [Q] Log out
+          </button>
+        </div>
       </div>
-      <div className="flex items-center gap-3">
-        <PhaseStepper current={phase} />
-        <button className="btn-ghost text-xs" onClick={onExit}>
-          Exit case
-        </button>
-      </div>
+      {phase !== 'intro' && phase !== 'complete' && <PhaseStepper current={phase} />}
     </header>
   );
 }
@@ -69,6 +76,8 @@ function CasePhaseRouter() {
   const phase = useGameStore((s) => s.phase);
 
   switch (phase) {
+    case 'intro':
+      return <IntroPhase />;
     case 'crime-scene':
       return <CrimeScenePhase />;
     case 'hypothesis':
@@ -88,11 +97,13 @@ function CasePhaseRouter() {
   }
 }
 
-function StoryBanner() {
+function PhaseFlavor({ phase }: { phase: keyof typeof caseOne.phaseFlavor }) {
+  const text = caseOne.phaseFlavor[phase];
+  if (!text) return null;
   return (
-    <p className="rounded-md border border-detective-slate bg-detective-navy/60 p-4 text-sm leading-relaxed text-detective-paper/90">
-      {caseOne.story}
-    </p>
+    <pre className="whitespace-pre-wrap font-mono text-sm leading-snug text-crt-dim animate-slide-in-up">
+      {text}
+    </pre>
   );
 }
 
@@ -104,11 +115,11 @@ function JournalSidebar() {
     const lines: string[] = [];
     collected.forEach((id) => {
       const e = caseOne.evidence.find((x) => x.id === id);
-      if (e) lines.push(`📍 ${e.name} — ${e.description}`);
+      if (e) lines.push(`> ${e.name}`);
     });
     Object.entries(phReadings).forEach(([id, r]) => {
       const e = caseOne.evidence.find((x) => x.id === id);
-      if (e) lines.push(`🧪 ${e.name}: pH ≈ ${r.ph.toFixed(1)} (${r.classification.replace('-', ' ')})`);
+      if (e) lines.push(`* ${e.name}: pH ${r.ph.toFixed(1)} (${r.classification.replace('-', ' ')})`);
     });
     return lines;
   }, [collected, phReadings]);
@@ -116,37 +127,58 @@ function JournalSidebar() {
   return <ScientistJournal activeCase={caseOne} observations={observations} />;
 }
 
+function IntroPhase() {
+  const setPhase = useGameStore((s) => s.setPhase);
+  const [done, setDone] = useState(false);
+  return (
+    <section className="panel-titled space-y-5" data-title="Incoming Transmission">
+      <Typewriter text={caseOne.intro} speed={14} onDone={() => setDone(true)} />
+      {done && (
+        <div className="flex justify-end animate-slide-in-up">
+          <button className="btn-primary" onClick={() => setPhase('crime-scene')}>
+            [Enter] Drive to the school ▶
+          </button>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function CrimeScenePhase() {
   const collected = useGameStore((s) => s.evidenceCollected);
+  const collectEvidence = useGameStore((s) => s.collectEvidence);
   const setPhase = useGameStore((s) => s.setPhase);
 
   const minToProceed = Math.min(4, caseOne.evidence.length);
   const canProceed = collected.length >= minToProceed;
 
   return (
-    <>
-      <StoryBanner />
+    <div className="space-y-4">
       <div className="grid gap-4 md:grid-cols-3">
         <div className="md:col-span-2">
-          <PhaserGame />
+          <CrimeSceneText
+            activeCase={caseOne}
+            collectedIds={collected}
+            onCollect={collectEvidence}
+          />
         </div>
         <JournalSidebar />
       </div>
       <EvidenceTray evidence={caseOne.evidence} collectedIds={collected} />
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-detective-paper/70">
-          Evidence collected: <span className="readout">{collected.length}</span> /{' '}
-          {caseOne.evidence.length} (need at least {minToProceed} to proceed)
+      <div className="flex items-center justify-between border-t border-crt-rule pt-3">
+        <p className="text-sm text-crt-dim">
+          Evidence logged: <span className="readout">{collected.length}</span> /{' '}
+          {caseOne.evidence.length} · need {minToProceed}+
         </p>
         <button
           className="btn-primary"
           disabled={!canProceed}
           onClick={() => setPhase('hypothesis')}
         >
-          Go to Hypothesis Board →
+          [Enter] To Hypothesis Notebook ▶
         </button>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -156,22 +188,24 @@ function HypothesisPhase() {
   const setHypothesisGrades = useGameStore((s) => s.setHypothesisGrades);
 
   const handleSubmit = useCallback(
-    (cards: import('./ui/HypothesisBoard').HypothesisCard[]) => {
+    (cards: HypothesisCard[]) => {
       submitHypotheses(cards.map((c) => c.id));
-      const grades = cards.map((c) => c.grade).filter((g): g is import('./cases/types').AiGrade => g !== null);
+      const grades = cards.map((c) => c.grade).filter((g): g is AiGrade => g !== null);
       setHypothesisGrades(grades);
-      EventBus.emit(GameEvents.HypothesisSubmitted, { count: cards.length });
       setPhase('lab');
     },
     [submitHypotheses, setHypothesisGrades, setPhase],
   );
 
   return (
-    <div className="grid gap-4 md:grid-cols-3">
-      <div className="md:col-span-2">
-        <HypothesisBoard activeCase={caseOne} onSubmit={handleSubmit} />
+    <div className="space-y-4">
+      <PhaseFlavor phase="hypothesis" />
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="md:col-span-2">
+          <HypothesisBoard activeCase={caseOne} onSubmit={handleSubmit} />
+        </div>
+        <JournalSidebar />
       </div>
-      <JournalSidebar />
     </div>
   );
 }
@@ -184,26 +218,28 @@ function LabPhase() {
   const setPhase = useGameStore((s) => s.setPhase);
 
   const handleComplete = useCallback(
-    (readings: Record<string, import('./cases/types').PhReading>, testIds: string[]) => {
+    (readings: Record<string, PhReading>, testIds: string[]) => {
       setPhReadings(readings);
       recordTests(testIds);
-      EventBus.emit(GameEvents.TestPerformed, { tool: 'ph_probe', count: testIds.length });
       setPhase('analysis');
     },
     [setPhReadings, recordTests, setPhase],
   );
 
   return (
-    <div className="grid gap-4 md:grid-cols-3">
-      <div className="md:col-span-2">
-        <PhProbeLab
-          activeCase={caseOne}
-          collectedIds={collected}
-          initialReadings={phReadings}
-          onComplete={handleComplete}
-        />
+    <div className="space-y-4">
+      <PhaseFlavor phase="lab" />
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="md:col-span-2">
+          <PhProbeLab
+            activeCase={caseOne}
+            collectedIds={collected}
+            initialReadings={phReadings}
+            onComplete={handleComplete}
+          />
+        </div>
+        <JournalSidebar />
       </div>
-      <JournalSidebar />
     </div>
   );
 }
@@ -214,18 +250,21 @@ function AnalysisPhase() {
   const setConfidence = useGameStore((s) => s.setConfidence);
 
   return (
-    <div className="grid gap-4 md:grid-cols-3">
-      <div className="md:col-span-2">
-        <DataAnalysis
-          activeCase={caseOne}
-          readings={phReadings}
-          onContinue={(confidence) => {
-            setConfidence(confidence);
-            setPhase('verdict');
-          }}
-        />
+    <div className="space-y-4">
+      <PhaseFlavor phase="analysis" />
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="md:col-span-2">
+          <DataAnalysis
+            activeCase={caseOne}
+            readings={phReadings}
+            onContinue={(confidence) => {
+              setConfidence(confidence);
+              setPhase('verdict');
+            }}
+          />
+        </div>
+        <JournalSidebar />
       </div>
-      <JournalSidebar />
     </div>
   );
 }
@@ -237,20 +276,22 @@ function VerdictPhase() {
   const phReadings = useGameStore((s) => s.phReadings);
 
   return (
-    <div className="grid gap-4 md:grid-cols-3">
-      <div className="md:col-span-2">
-        <VerdictPanel
-          activeCase={caseOne}
-          readings={phReadings}
-          onSubmit={(suspectId, reasoning, grade) => {
-            setVerdict(suspectId, reasoning);
-            setVerdictGrade(grade);
-            EventBus.emit(GameEvents.VerdictSubmitted, { suspectId });
-            setPhase('reflection');
-          }}
-        />
+    <div className="space-y-4">
+      <PhaseFlavor phase="verdict" />
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="md:col-span-2">
+          <VerdictPanel
+            activeCase={caseOne}
+            readings={phReadings}
+            onSubmit={(suspectId, reasoning, grade) => {
+              setVerdict(suspectId, reasoning);
+              setVerdictGrade(grade);
+              setPhase('reflection');
+            }}
+          />
+        </div>
+        <JournalSidebar />
       </div>
-      <JournalSidebar />
     </div>
   );
 }
@@ -259,6 +300,7 @@ function ReflectionPhase() {
   const setReflections = useGameStore((s) => s.setReflections);
   const setPhase = useGameStore((s) => s.setPhase);
   const completeCase = useGameStore((s) => s.completeCase);
+  const setReflectionGradeStore = useGameStore((s) => s.setReflectionGrade);
 
   const evidenceCollected = useGameStore((s) => s.evidenceCollected);
   const hypothesesSubmitted = useGameStore((s) => s.hypothesesSubmitted);
@@ -267,10 +309,9 @@ function ReflectionPhase() {
   const finalVerdict = useGameStore((s) => s.finalVerdict);
   const verdictGrade = useGameStore((s) => s.verdictGrade);
   const confidence = useGameStore((s) => s.confidence);
-  const setReflectionGradeStore = useGameStore((s) => s.setReflectionGrade);
 
   const handleComplete = useCallback(
-    (answers: Record<string, string>, grades: Record<string, import('./cases/types').AiGrade>) => {
+    (answers: Record<string, string>, grades: Record<string, AiGrade>) => {
       setReflections(answers);
       Object.entries(grades).forEach(([qid, grade]) => setReflectionGradeStore(qid, grade));
 
@@ -308,11 +349,14 @@ function ReflectionPhase() {
   );
 
   return (
-    <div className="grid gap-4 md:grid-cols-3">
-      <div className="md:col-span-2">
-        <ReflectionDialog activeCase={caseOne} onComplete={handleComplete} />
+    <div className="space-y-4">
+      <PhaseFlavor phase="reflection" />
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="md:col-span-2">
+          <ReflectionDialog activeCase={caseOne} onComplete={handleComplete} />
+        </div>
+        <JournalSidebar />
       </div>
-      <JournalSidebar />
     </div>
   );
 }
@@ -328,38 +372,56 @@ function CompletePhase() {
   const suspect = caseOne.suspects.find((s) => s.id === finalVerdict);
 
   return (
-    <div className="grid gap-4 md:grid-cols-3">
+    <div className="space-y-4">
       {verdictCorrect && <Confetti />}
-      <div className="space-y-4 md:col-span-2">
-        <section
-          className={`panel ${
-            verdictCorrect
-              ? 'border-detective-amber/60 animate-reveal-pop'
-              : 'border-detective-clue/60 animate-shake animate-flash-red'
-          }`}
-        >
-          <h2 className="text-2xl font-bold text-detective-paper">
-            {verdictCorrect ? '🎉  Case solved!' : '✗  Case closed — verdict was wrong.'}
-          </h2>
-          <p className="mt-2 text-sm text-detective-paper/80">
-            You named <span className="font-semibold">{suspect?.name ?? '—'}</span> as the cause.
-            {verdictCorrect
-              ? ' That matches the chemistry: a strong acid (pH ≈ 1) was added to the principal\'s coffee.'
-              : ` The correct cause was the unknown strong acid (Bottle D), pH ≈ 1, matching the residue in the mug.`}
-          </p>
-        </section>
+      <PhaseFlavor phase="complete" />
 
-        <div className="animate-slide-in-up">
-          <ScoreCard scores={progress.scores} />
-        </div>
+      <section
+        className={`panel ${
+          verdictCorrect
+            ? 'animate-reveal-pop border-crt-fg'
+            : 'animate-shake animate-flash-red border-crt-danger'
+        }`}
+      >
+        <p className="text-xs uppercase tracking-widest text-crt-dim">{caseOne.subtitle}</p>
+        <h2 className="mt-1 text-3xl uppercase text-crt-bright text-glow-strong">
+          {verdictCorrect ? 'CASE CLOSED · CORRECT' : 'CASE CLOSED · WRONG CALL'}
+        </h2>
+        <pre className="mt-3 whitespace-pre-wrap font-mono text-sm leading-snug text-crt-fg">
+          {verdictCorrect
+            ? `You flagged ${suspect?.name}.
+
+The hospital matched the antidote in fifteen minutes.
+Pak Hartono is awake. Pak Budi was picked up at 06:50
+while trying to enter the school. The HCl bottle in
+his car still has his fingerprints on it.
+
+The doctor sent a note: "Tell the kid thanks."
+
+You go home, change out of your gloves, and sleep
+for the first time tonight.`
+            : `You named ${suspect?.name ?? '(no one)'}.
+
+The doctor picked the wrong antidote. Pak Hartono is
+in worse condition. He will recover — eventually —
+but you lost three hours.
+
+The actual cause was Bottle D, an unlabeled strong
+acid (pH ≈ 1) that matched the residue in his coffee
+mug.
+
+Bu Sari does not look at you when you leave.`}
+        </pre>
+      </section>
+
+      <div className="animate-slide-in-up">
+        <ScoreCard scores={progress.scores} />
       </div>
-      <div className="space-y-4">
-        <JournalSidebar />
-        <div className="flex flex-col gap-2">
-          <button className="btn-primary" onClick={resetCase}>
-            Back to menu
-          </button>
-        </div>
+
+      <div className="flex justify-end">
+        <button className="btn-primary" onClick={resetCase}>
+          [Enter] Log out and go home
+        </button>
       </div>
     </div>
   );
@@ -368,29 +430,37 @@ function CompletePhase() {
 function MainMenu({ onStart }: { onStart: () => void }) {
   const lastProgress = useMemo(() => loadProgress(caseOne.id), []);
   return (
-    <main className="flex min-h-full flex-col items-center justify-center p-6 text-center">
-      <p className="mb-2 text-xs uppercase tracking-[0.3em] text-detective-amber">
-        IB MYP Year 4 · Sciences
+    <main className="crt-flicker mx-auto flex min-h-full max-w-3xl flex-col items-center justify-center p-6 text-center">
+      <pre className="text-crt-dim text-xs leading-tight">{`
+   ░█▀▀░█▀▀░▀█▀░░░░█▀▀░█▀▀░▀█▀░█▀▀░█▀█░█▀▀░█▀▀░░░█░░░█▀█░█▀▄
+   ░█░░░▀▀█░░█░░▀▀░▀▀█░█░░░░█░░█▀▀░█░█░█░░░█▀▀░░░█░░░█▀█░█▀▄
+   ░▀▀▀░▀▀▀░▀▀▀░░░░▀▀▀░▀▀▀░▀▀▀░▀▀▀░▀░▀░▀▀▀░▀▀▀░░░▀▀▀░▀░▀░▀▀░
+`}</pre>
+      <p className="mb-2 text-xs uppercase tracking-[0.4em] text-crt-dim">
+        IB MYP Year 4 · Sciences · Forensics Lab
       </p>
-      <h1 className="mb-3 text-5xl font-extrabold text-detective-paper">CSI: Science Lab</h1>
-      <p className="mb-8 max-w-xl text-detective-paper/80">
-        Solve school mysteries using the scientific method. Form hypotheses, run lab tests,
-        analyze data, and reach a verdict you can defend.
+      <h1 className="mb-3 text-3xl uppercase text-crt-bright text-glow-strong md:text-4xl">
+        Solve the case using the scientific method
+      </h1>
+      <p className="mb-8 max-w-xl text-crt-fg/85">
+        You are a junior member of the Student Forensics Club. The school's
+        principal — your mentor — has been poisoned. You have twenty minutes
+        in his office before the police arrive.
       </p>
+
+      <p className="mb-3 text-sm text-crt-dim">&gt; Available cases:</p>
       <div className="flex flex-col gap-3 sm:flex-row">
-        <button className="btn-primary text-lg" onClick={onStart}>
-          Start Case 1 — The Poisoned Principal
+        <button className="btn-primary" onClick={onStart}>
+          [1] {caseOne.title}
         </button>
         <button className="btn-ghost" disabled>
-          About (coming soon)
-        </button>
-        <button className="btn-ghost" disabled>
-          Settings (coming soon)
+          [2] Mystery in the Pond — LOCKED
         </button>
       </div>
+
       {lastProgress?.completedAt && (
-        <p className="mt-6 text-xs text-detective-paper/60">
-          Last attempt: A:{lastProgress.scores.A} B:{lastProgress.scores.B} C:
+        <p className="mt-8 border-t border-crt-rule pt-3 text-xs text-crt-dim">
+          &gt; Last attempt — A:{lastProgress.scores.A} B:{lastProgress.scores.B} C:
           {lastProgress.scores.C} D:{lastProgress.scores.D} ·{' '}
           {new Date(lastProgress.completedAt).toLocaleDateString()}
         </p>

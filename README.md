@@ -7,32 +7,33 @@ An educational browser-based game for Grade 9 IB MYP students. Players act as ju
 ## Tech stack
 
 - **Vite** + **React 19** + **TypeScript** — UI layer and dev tooling
-- **Phaser 4** — game engine for crime-scene exploration and lab mini-games
 - **Tailwind CSS v3** — styling
-- **Zustand** — shared state between React and Phaser
+- **Zustand** — game state
+- **Google Gemini 2.0 Flash** (via `@google/genai` + Netlify Functions) — formative AI feedback on every text input
+- **VT323** font (Google Fonts) — for the retro CRT terminal look
 
-React renders the UI overlay (Hypothesis Board, Journal, panels) while Phaser owns the gameplay canvas. They communicate through an `EventBus` singleton so neither layer reaches into the other directly.
+No Phaser, no canvas, no game engine. The game is built as a retro-CRT *text adventure* with typewriter narration, scanlines, blinking cursor, and ASCII frames. Gameplay is driven by narrative choice and scientific reasoning, not graphics or animation.
 
 ## Project layout
 
 ```
 src/
-├── App.tsx                     # main menu + case shell
-├── main.tsx                    # React entry, loads Tailwind globals
-├── game/                       # Phaser layer
-│   ├── PhaserGame.tsx          # React wrapper that mounts/destroys Phaser
-│   ├── config.ts               # Phaser.Game config
-│   ├── EventBus.ts             # Phaser ↔ React event bridge
-│   ├── useEventBus.ts          # React hook for EventBus subscriptions
-│   └── scenes/
-│       └── BootScene.ts        # placeholder boot scene
+├── App.tsx                     # main menu + case shell + phase router
+├── main.tsx                    # React entry
 ├── ui/                         # React components
-│   ├── HypothesisBoard.tsx     # "If… then… because…" form + variable tagging
-│   ├── ScientistJournal.tsx
+│   ├── Typewriter.tsx          # char-by-char text reveal with skippable cursor
+│   ├── CrimeSceneText.tsx      # text-driven scene exploration with [n] examine commands
+│   ├── HypothesisBoard.tsx     # free-text "If… then… because…" + AI grading per card
+│   ├── PhProbeLab.tsx          # text/bubble-animated lab readouts
+│   ├── DataAnalysis.tsx        # tabular pH readings, outlier highlight, confidence slider
+│   ├── VerdictPanel.tsx        # AI-gated reasoning + suspect select
+│   ├── ReflectionDialog.tsx    # 4 reflection questions, AI feedback per question
+│   ├── ScoreCard.tsx           # IB MYP criterion scores A–D
+│   ├── AiFeedbackPanel.tsx     # shared AI score/strengths/next-step display
 │   ├── EvidenceTray.tsx
-│   ├── VerdictPanel.tsx
-│   ├── ReflectionDialog.tsx
-│   └── ScoreCard.tsx           # IB MYP criterion scores A–D
+│   ├── ScientistJournal.tsx
+│   ├── PhaseStepper.tsx
+│   └── Confetti.tsx
 ├── cases/                      # data-driven case definitions
 │   ├── types.ts
 │   └── case-01-poisoned-principal.ts
@@ -101,10 +102,10 @@ Scoring logic lives in `src/lib/ibCriteria.ts` and is centralized — engine cod
 
 Case 1 is playable end-to-end. Cases 2–4 from the brief are not yet built.
 
-- [x] Vite + React + TS + Phaser + Tailwind set up
+- [x] Vite + React + TS + Tailwind set up (Phaser removed in favor of text-driven gameplay)
 - [x] Main menu (start Case 1)
 - [x] Case 1 data file with suspects, evidence, hypotheses, reflection
-- [x] Crime scene Phaser scene with clickable evidence
+- [x] Text-driven crime scene with typewriter briefing and `[n] Examine` commands
 - [x] Hypothesis Board functional with IV/DV/control tagging
 - [x] pH probe lab mini-game with universal indicator
 - [x] Data analysis screen with table + pH bars + outlier highlight + confidence slider

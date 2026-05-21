@@ -61,12 +61,27 @@ export interface PhReading {
   notes: string;
 }
 
+export type CasePhase =
+  | 'menu'
+  | 'intro'
+  | 'crime-scene'
+  | 'hypothesis'
+  | 'lab'
+  | 'analysis'
+  | 'verdict'
+  | 'reflection'
+  | 'complete';
+
 export interface Case {
   id: string;
   title: string;
+  subtitle: string;
   subject: Subject;
   mypTopics: string[];
   story: string;
+  intro: string;
+  briefing: string;
+  phaseFlavor: Partial<Record<CasePhase, string>>;
   suspects: Suspect[];
   evidence: Evidence[];
   labTools: LabTool[];
